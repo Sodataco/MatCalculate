@@ -10,7 +10,7 @@
 // This is a generic GEMM kernel that works for all sizes and configurations: it doesn't require any
 // pre and and post-processing kernels.
 //
-// This kernel is seperated into three files. This is part 1 out of 3.
+// This kernel is seperated into three files. This is part 1 out of 4.
 //
 // =================================================================================================
 
