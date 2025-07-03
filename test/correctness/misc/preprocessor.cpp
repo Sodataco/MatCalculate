@@ -278,6 +278,7 @@ size_t RunPreprocessor(int argc, char *argv[], const bool silent, const Precisio
     #include "../src/kernels/level3/xgemm_direct_part1.opencl"
     #include "../src/kernels/level3/xgemm_direct_part2.opencl"
     #include "../src/kernels/level3/xgemm_direct_part3.opencl"
+    #include "../src/kernels/level3/xgemm_direct_part4.opencl"
   ;
   if (TestKernel(device, context, "XgemmDirectTN", gemm_direct_sources, precision)) { passed++; } else { errors++; }
 

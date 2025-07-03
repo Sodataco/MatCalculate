@@ -48,6 +48,7 @@ TunerSettings XgemmDirectGetTunerSettings(const int V, const Arguments<T> &args)
 #include "../src/kernels/level3/xgemm_direct_part1.opencl"
 #include "../src/kernels/level3/xgemm_direct_part2.opencl"
 #include "../src/kernels/level3/xgemm_direct_part3.opencl"
+#include "../src/kernels/level3/xgemm_direct_part4.opencl"
   ;
 
   // Buffer sizes

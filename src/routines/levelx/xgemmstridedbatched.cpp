@@ -34,6 +34,7 @@ XgemmStridedBatched<T>::XgemmStridedBatched(Queue &queue, EventPointer event, co
             #include "../../kernels/level3/xgemm_direct_part1.opencl"
             #include "../../kernels/level3/xgemm_direct_part2.opencl"
             #include "../../kernels/level3/xgemm_direct_part3.opencl"
+            #include "../../kernels/level3/xgemm_direct_part4.opencl"
             , // separated in multiple parts to prevent C1091 in MSVC 2013
             #include "../../kernels/level3/xgemm_part1.opencl"
             #include "../../kernels/level3/xgemm_part2.opencl"
