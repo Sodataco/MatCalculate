@@ -37,19 +37,22 @@ R"(
   typedef real8 realnvec;
 #endif
 
-#if VWCD == 1
+/*#if VWCD == 1
   typedef real realcvec;
 #elif VWCD == 2
   typedef real2 realcvec;
-#elif VWCD == 4
+#elif VWCD == 4*/
   typedef real4 realcvec;
-#endif
+/*#endif*/
 
 #ifndef VEC_K_UNROLL
 #define VEC_K_UNROLL 4
 #endif
 
-INLINE_FUNC real GetVectorElement(realmvec vec, int index);
+INLINE_FUNC real GetVectorElementm(realmvec vec, int index);
+INLINE_FUNC real GetVectorElementn(realnvec vec, int index);
+INLINE_FUNC real GetVectorElementc(realcvec vec, int index);
+
 INLINE_FUNC void AddToVectorElement(realcvec* vec, int index, real value);
 INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec, 
                                    int mi_base, int ni, int idm, int idn,
@@ -147,8 +150,8 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
                 for (int _vni = 0; _vni < VWND; _vni++) {
                   #pragma unroll
                   for (int _vmi = 0; _vmi < VWMD; _vmi++) {
-                    const real a_val = GetVectorElement(apd_vec[_mi], _vmi);
-                    const real b_val = GetVectorElement(bpd_vec[_ni], _vni);
+                    const real a_val = GetVectorElementm(apd_vec[_mi], _vmi);
+                    const real b_val = GetVectorElementn(bpd_vec[_ni], _vni);
                     
                     // Calculate target vector and element index
                     const int total_mi = _mi * VWMD + _vmi;
@@ -250,8 +253,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
 
     // Loop over the remaining part (incomplete tile in K-dimension)
     for (; kwg < kSizeK; ++kwg) {
-
-      // Loads data: off-chip --> private (matrix A and B)
+      printf("[XgemmDirect] Edge Scalar tail kwg=%d\n", kwg);
       #pragma unroll
       for (int _mi = 0; _mi < MWID; _mi += 1) {
         apd[_mi] = GlobalToPrivateCheckedA(agms, _mi, a_ld, a_offset, idm, kwg, a_transpose, a_conjugate, kSizeM);

@@ -223,7 +223,6 @@ INLINE_FUNC void StoreResultsDirectOptimized(__global real* cgm, const real c_va
 
 // Merges the results in Cpm with the global array in Cgm. This also performs the multiplication
 // with the constants: Cgm = alpha*A*B + beta*Cgm = alpha*Cpm + beta*Cgm
-/*原
 INLINE_FUNC void StoreResultsChecked(__global real* cgm, const real c_value,
                                      const int _mi, const int _ni, const int idm, const int idn,
                                      const int kSizeM, const int kSizeN,
@@ -245,9 +244,9 @@ INLINE_FUNC void StoreResultsChecked(__global real* cgm, const real c_value,
     }
     cgm[c_index + c_offset] = result;
   }
-}*/
+}
 
-//改
+/*//改
 INLINE_FUNC void StoreResultsCheckedOptimized(__global real* cgm, const real c_value,
                                      const int _mi, const int _ni, const int idm, const int idn,
                                      const int kSizeM, const int kSizeN,
@@ -268,7 +267,7 @@ INLINE_FUNC void StoreResultsCheckedOptimized(__global real* cgm, const real c_v
     // 存储结果
     cgm[c_index + c_offset] = result;
   }
-}
+}*/
 
 // =================================================================================================
 

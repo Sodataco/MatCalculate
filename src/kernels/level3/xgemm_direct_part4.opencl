@@ -16,17 +16,17 @@ R"(
 
 //new
 // Vector load/store helper functions
-INLINE_FUNC real GetVectorElement(realmvec vec, int index) {
+INLINE_FUNC real GetVectorElementm(realmvec vec, int index) {
   #if VWMD == 1
     return vec;
   #elif VWMD == 2
-    return (index == 0) ? vec.s0 : vec.s1;
+    return (index == 0) ? vec.x : vec.y;
   #elif VWMD == 4
     switch(index) {
-      case 0: return vec.s0;
-      case 1: return vec.s1;
-      case 2: return vec.s2;
-      case 3: return vec.s3;
+      case 0: return vec.x;
+      case 1: return vec.y;
+      case 2: return vec.z;
+      case 3: return vec.w;
     }
   #elif VWMD == 8
     switch(index) {
@@ -42,21 +42,55 @@ INLINE_FUNC real GetVectorElement(realmvec vec, int index) {
   #endif
   return 0;
 }
-
-INLINE_FUNC void AddToVectorElement(realcvec* vec, int index, real value) {
-  #if VWCD == 1
-    *vec += value;
-  #elif VWCD == 2
-    if (index == 0) (*vec).s0 += value;
-    else (*vec).s1 += value;
-  #elif VWCD == 4
+INLINE_FUNC real GetVectorElementn(realnvec vec, int index) {
+  #if VWND == 1
+    return vec;
+  #elif VWND == 2
+    return (index == 0) ? vec.x : vec.y;
+  #elif VWND == 4
     switch(index) {
-      case 0: (*vec).s0 += value; break;
-      case 1: (*vec).s1 += value; break;
-      case 2: (*vec).s2 += value; break;
-      case 3: (*vec).s3 += value; break;
+      case 0: return vec.x;
+      case 1: return vec.y;
+      case 2: return vec.z;
+      case 3: return vec.w;
+    }
+  #elif VWND == 8
+    switch(index) {
+      case 0: return vec.s0;
+      case 1: return vec.s1;
+      case 2: return vec.s2;
+      case 3: return vec.s3;
+      case 4: return vec.s4;
+      case 5: return vec.s5;
+      case 6: return vec.s6;
+      case 7: return vec.s7;
     }
   #endif
+  return 0;
+}
+INLINE_FUNC real GetVectorElementc(realcvec vec, int index) {
+    switch(index) {
+      case 0: return vec.x;
+      case 1: return vec.y;
+      case 2: return vec.z;
+      case 3: return vec.w;
+    }
+}
+
+INLINE_FUNC void AddToVectorElement(realcvec* vec, int index, real value) {
+  /*#if VWCD == 1
+    *vec += value;
+  #elif VWCD == 2
+    if (index == 0) (*vec).x += value;
+    else (*vec).y += value;
+  #elif VWCD == 4*/
+  switch(index) {
+    case 0: (*vec).x += value; break;
+    case 1: (*vec).y += value; break;
+    case 2: (*vec).z += value; break;
+    case 3: (*vec).w += value; break;
+  }
+ /* #endif*/
 }
 
 INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec, 
@@ -73,7 +107,7 @@ INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec,
     for (int i = 0; i < VWCD; i++) {
       const int row = row_base + i;
       const int index = (col * c_ld) + row + c_offset;
-      const real new_value = alpha * GetVectorElement(c_vec, i) + beta * cgm[index];
+      const real new_value = alpha * GetVectorElementc(c_vec, i) + beta * cgm[index];
       cgm[index] = new_value;
     }
   } else {
@@ -81,7 +115,7 @@ INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec,
     for (int i = 0; i < VWCD; i++) {
       const int row = row_base + i;
       const int index = (row * c_ld) + col + c_offset;
-      const real new_value = alpha * GetVectorElement(c_vec, i) + beta * cgm[index];
+      const real new_value = alpha * GetVectorElementc(c_vec, i) + beta * cgm[index];
       cgm[index] = new_value;
     }
   }
@@ -93,15 +127,28 @@ INLINE_FUNC realmvec LocalToPrivateVectorA(LOCAL_PTR real* alm, int mi, int kg, 
   #if VWMD == 1
     return alm[local_index];
   #elif VWMD == 2
-    return (realmvec)(alm[local_index], alm[local_index+1]);
+    realmvec result;
+    result.x = alm[local_index];
+    result.y = alm[local_index+1];
+    return result;
   #elif VWMD == 4
-    return (realmvec)(alm[local_index], alm[local_index+1], 
-                      alm[local_index+2], alm[local_index+3]);
+    realmvec result;
+    result.x = alm[local_index];
+    result.y = alm[local_index+1];
+    result.z = alm[local_index+2];
+    result.w = alm[local_index+3];
+    return result;
   #elif VWMD == 8
-    return (realmvec)(alm[local_index], alm[local_index+1], 
-                      alm[local_index+2], alm[local_index+3],
-                      alm[local_index+4], alm[local_index+5],
-                      alm[local_index+6], alm[local_index+7]);
+    realmvec result;
+    result.s0 = alm[local_index];
+    result.s1 = alm[local_index+1];
+    result.s2 = alm[local_index+2];
+    result.s3 = alm[local_index+3];
+    result.s4 = alm[local_index+4];
+    result.s5 = alm[local_index+5];
+    result.s6 = alm[local_index+6];
+    result.s7 = alm[local_index+7];
+    return result;
   #endif
 }
 
@@ -111,15 +158,28 @@ INLINE_FUNC realnvec LocalToPrivateVectorB(LOCAL_PTR real* blm, int ni, int kg, 
   #if VWND == 1
     return blm[local_index];
   #elif VWND == 2
-    return (realnvec)(blm[local_index], blm[local_index+1]);
+    realnvec result;
+    result.x = blm[local_index];
+    result.y = blm[local_index+1];
+    return result;
   #elif VWND == 4
-    return (realnvec)(blm[local_index], blm[local_index+1], 
-                      blm[local_index+2], blm[local_index+3]);
+    realnvec result;
+    result.x = blm[local_index];
+    result.y = blm[local_index+1];
+    result.z = blm[local_index+2];
+    result.w = blm[local_index+3];
+    return result;
   #elif VWND == 8
-    return (realnvec)(blm[local_index], blm[local_index+1], 
-                      blm[local_index+2], blm[local_index+3],
-                      blm[local_index+4], blm[local_index+5],
-                      blm[local_index+6], blm[local_index+7]);
+    realnvec result;
+    result.s0 = blm[local_index];
+    result.s1 = blm[local_index+1];
+    result.s2 = blm[local_index+2];
+    result.s3 = blm[local_index+3];
+    result.s4 = blm[local_index+4];
+    result.s5 = blm[local_index+5];
+    result.s6 = blm[local_index+6];
+    result.s7 = blm[local_index+7];
+    return result;
   #endif
 }
 
@@ -209,7 +269,7 @@ void XgemmDirectTT(const int kSizeM, const int kSizeN, const int kSizeK,
                             const int c_transpose, const int a_conjugate, const int b_conjugate) {
   __local real alm[WGD * (WGD + PADA)];
   __local real blm[WGD * (WGD + PADB)];
-  XgemmDire0ct(kSizeM, kSizeN, kSizeK, arg_alpha, arg_beta,
+  XgemmDirect(kSizeM, kSizeN, kSizeK, arg_alpha, arg_beta,
               agm, a_offset, a_ld, bgm, b_offset, b_ld, cgm, c_offset, c_ld,
               alm, blm, 1, 1, c_transpose, a_conjugate, b_conjugate);
 }
@@ -220,4 +280,4 @@ void XgemmDirectTT(const int kSizeM, const int kSizeN, const int kSizeK,
 // End of the C++11 raw string literal
 )"
 
-// =================================================================================================
+    // =================================================================================================

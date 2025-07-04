@@ -73,11 +73,17 @@ R"(
   #define KWI 1      // Unroll factor of the KWG loop (smaller or equal than KWG)
 #endif
 #ifndef VWM
+  #define VWM 4      // Vector width of matrices A and C
+#endif
+#ifndef VWN
+  #define VWN 4      // Vector width of matrix B
+#endif
+/*#ifndef VWM
   #define VWM 1      // Vector width of matrices A and C
 #endif
 #ifndef VWN
   #define VWN 1      // Vector width of matrix B
-#endif
+#endif*/
 #ifndef STRM
   #define STRM 0     // Use strided access within a thread in the M-dimension (1) or not (0) (kernel 0 only)
 #endif
