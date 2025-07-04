@@ -1,4 +1,3 @@
-
 // =================================================================================================
 // This file is part of the CLBlast project. The project is licensed under Apache Version 2.0. This
 // project loosely follows the Google C++ styleguide and uses a tab-size of two spaces and a max-
@@ -91,6 +90,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
   #pragma promote_to_registers
   realcvec cpd_vec[CEIL_DIV(MWID, VWCD) * NWID];
 
+  // 初始化累加器
   #pragma unroll
   for (int _mi = 0; _mi < CEIL_DIV(MWID, VWCD); _mi++) {
     #pragma unroll
@@ -105,13 +105,12 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
 
     int kwg = 0;
     for (; kwg < (kSizeK/WGD) * WGD; kwg += WGD) {
-
       // Vectorized loading: off-chip --> local (matrix A and B)
       if (a_ld % VWMD == 0 && a_offset % VWMD == 0) {
         GlobalToLocalDirectA(agm, alm, a_ld, a_offset, kwg, a_transpose, a_conjugate);
       }
       else {
-        GlobalToLocalScalarA(agms, alm, a_ld, a_offset, kwg, a_transpose, a_conjugate);
+              GlobalToLocalScalarA(agms, alm, a_ld, a_offset, kwg, a_transpose, a_conjugate);
       }
       if (b_ld % VWND == 0 && b_offset % VWND == 0) {
         GlobalToLocalDirectB(bgm, blm, b_ld, b_offset, kwg, b_transpose, b_conjugate);
@@ -126,25 +125,21 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
         for (int _pit = 0; _pit < VEC_K_UNROLL; _pit++) {
           int kg = pwi + _pit;
           if (kg < WGD) {
-            
             // Vectorized load: local --> private (matrix A)
             #pragma unroll
             for (int _mi = 0; _mi < CEIL_DIV(MWID, VWMD); _mi++) {
               apd_vec[_mi] = LocalToPrivateVectorA(alm, _mi, kg, a_transpose);
             }
-            
             // Vectorized load: local --> private (matrix B)
             #pragma unroll
             for (int _ni = 0; _ni < CEIL_DIV(NWID, VWND); _ni++) {
               bpd_vec[_ni] = LocalToPrivateVectorB(blm, _ni, kg, b_transpose);
             }
-            
             // Vectorized multiply-add
             #pragma unroll
             for (int _ni = 0; _ni < CEIL_DIV(NWID, VWND); _ni++) {
               #pragma unroll
               for (int _mi = 0; _mi < CEIL_DIV(MWID, VWMD); _mi++) {
-                
                 // Expand vectors to scalars for computation
                 #pragma unroll
                 for (int _vni = 0; _vni < VWND; _vni++) {
@@ -152,13 +147,11 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
                   for (int _vmi = 0; _vmi < VWMD; _vmi++) {
                     const real a_val = GetVectorElementm(apd_vec[_mi], _vmi);
                     const real b_val = GetVectorElementn(bpd_vec[_ni], _vni);
-                    
                     // Calculate target vector and element index
                     const int total_mi = _mi * VWMD + _vmi;
                     const int total_ni = _ni * VWND + _vni;
                     const int vec_idx = total_ni * CEIL_DIV(MWID, VWCD) + total_mi / VWCD;
                     const int elem_idx = total_mi % VWCD;
-                    
                     // Accumulate result
                     AddToVectorElement(&cpd_vec[vec_idx], elem_idx, a_val * b_val);
                   }
@@ -173,19 +166,17 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
 
     // Loop over the remaining part (incomplete tile in K-dimension)
     for (; kwg < kSizeK; ++kwg) {
-
       // Scalar loading for remaining elements
       #pragma unroll
       for (int _mi = 0; _mi < MWID; _mi++) {
         const real a_val = GlobalToPrivateDirectA(agms, _mi, a_ld, a_offset, idm, kwg, a_transpose, a_conjugate);
-        
         // Accumulate directly to result vectors
         #pragma unroll
         for (int _ni = 0; _ni < NWID; _ni++) {
           const int vec_idx = _ni * CEIL_DIV(MWID, VWCD) + _mi / VWCD;
           const int elem_idx = _mi % VWCD;
-          AddToVectorElement(&cpd_vec[vec_idx], elem_idx, 
-                             a_val * GlobalToPrivateDirectB(bgms, _ni, b_ld, b_offset, idn, kwg, b_transpose, b_conjugate));
+          const real b_val = GlobalToPrivateDirectB(bgms, _ni, b_ld, b_offset, idn, kwg, b_transpose, b_conjugate); 
+          AddToVectorElement(&cpd_vec[vec_idx], elem_idx, a_val * b_val);
         }
       }
     }
@@ -201,33 +192,26 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       }
     }
   }
-
   //改end
-
   else {
-
   #pragma promote_to_registers
   real apd[MWID];
   #pragma promote_to_registers
   real bpd[NWID];
   #pragma promote_to_registers
   real cpd[NWID * MWID];
-
     // Loops over all complete workgroup tiles (K-dimension)
     int kwg = 0;
     for (; kwg < (kSizeK/WGD) * WGD; kwg+=WGD) {
-
       // Loads data: off-chip --> local (matrix A and B)
       GlobalToLocalCheckedA(agms, alm, a_ld, a_offset, kwg, a_transpose, a_conjugate, kSizeM, kSizeK);
       GlobalToLocalCheckedB(bgms, blm, b_ld, b_offset, kwg, b_transpose, b_conjugate, kSizeN, kSizeK);
       barrier(CLK_LOCAL_MEM_FENCE);
-
       // Loops over all workitem tiles, unrolled by a factor KWID
       for (int pwi = 0; pwi < WGD; pwi += KWID) {
         #pragma unroll
         for (int _pit = 0; _pit < KWID; _pit += 1) {
           int kg = pwi + _pit;
-
           // Loads data: local --> private (matrix A and B)
           #pragma unroll
           for (int _mi = 0; _mi < MWID; _mi += 1) {
@@ -237,7 +221,6 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
           for (int _ni = 0; _ni < NWID; _ni += 1) {
             bpd[_ni] = LocalToPrivateDirectB(blm, _ni, kg, b_transpose);
           }
-
           // Performs the accumulation (C += A * B)
           #pragma unroll
           for (int _ni = 0; _ni < NWID; _ni += 1) {
@@ -250,10 +233,8 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       }
       barrier(CLK_LOCAL_MEM_FENCE);
     }
-
     // Loop over the remaining part (incomplete tile in K-dimension)
-    for (; kwg < kSizeK; ++kwg) {
-      printf("[XgemmDirect] Edge Scalar tail kwg=%d\n", kwg);
+    for (; kwg < kSizeK; ++kwg) { 
       #pragma unroll
       for (int _mi = 0; _mi < MWID; _mi += 1) {
         apd[_mi] = GlobalToPrivateCheckedA(agms, _mi, a_ld, a_offset, idm, kwg, a_transpose, a_conjugate, kSizeM);
@@ -262,7 +243,6 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       for (int _ni = 0; _ni < NWID; _ni += 1) {
         bpd[_ni] = GlobalToPrivateCheckedB(bgms, _ni, b_ld, b_offset, idn, kwg, b_transpose, b_conjugate, kSizeN);
       }
-
       // Performs the accumulation (C += A * B)
       #pragma unroll
       for (int _ni = 0; _ni < NWID; _ni += 1) {
@@ -272,8 +252,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
         }
       }
     }
-
-    // Stores a tile of results and performs the multiplication with alpha and beta
+    // Stores a tile of results和 performs the multiplication with alpha and beta
     #pragma unroll
     for (int _ni = 0; _ni < NWID; _ni += 1) {
       #pragma unroll

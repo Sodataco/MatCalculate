@@ -174,7 +174,7 @@ INLINE_FUNC real LocalToPrivateDirectB(LOCAL_PTR real* blm, const int _ni, const
 
 // Merges the results in Cpm with the global array in Cgm. This also performs the multiplication
 // with the constants: Cgm = alpha*A*B + beta*Cgm = alpha*Cpm + beta*Cgm
-/*原
+
 INLINE_FUNC void StoreResultsDirect(__global real* cgm, const real c_value,
                                     const int _mi, const int _ni, const int idm, const int idn,
                                     const real alpha, const real beta,
@@ -194,32 +194,6 @@ INLINE_FUNC void StoreResultsDirect(__global real* cgm, const real c_value,
   }
   cgm[c_index + c_offset] = result;
 }
-*/
-
-//改
-// 优化后的存储函数
-INLINE_FUNC void StoreResultsDirectOptimized(__global real* cgm, const real c_value,
-                                            const int _mi, const int _ni, const int idm, const int idn,
-                                            const real alpha, const real beta,
-                                            const int c_ld, const int c_offset, const int c_transpose) {
-
-  // 计算目标索引
-  int c_index = (c_transpose) ? (idm + _mi)*c_ld + (idn + _ni) : (idn + _ni)*c_ld + (idm + _mi);
-  const int index = c_index + c_offset;
-  
-  // 延迟求和优化核心
-  real result;
-  if (IsZero(beta)) {
-    // Beta=0: 避免读取C矩阵
-    Multiply(result, alpha, c_value);
-  } else {
-    // 读取C值并融合计算: result = alpha * c_value + beta * C_global
-    real c_global = cgm[index];
-    AXPBY(result, alpha, c_value, beta, c_global);
-  }
-  cgm[index] = result;
-}
-
 
 // Merges the results in Cpm with the global array in Cgm. This also performs the multiplication
 // with the constants: Cgm = alpha*A*B + beta*Cgm = alpha*Cpm + beta*Cgm
@@ -246,28 +220,6 @@ INLINE_FUNC void StoreResultsChecked(__global real* cgm, const real c_value,
   }
 }
 
-/*//改
-INLINE_FUNC void StoreResultsCheckedOptimized(__global real* cgm, const real c_value,
-                                     const int _mi, const int _ni, const int idm, const int idn,
-                                     const int kSizeM, const int kSizeN,
-                                     const real alpha, const real beta,
-                                     const int c_ld, const int c_offset, const int c_transpose) {
-  // 边界检查
-  if ((idm + _mi) < kSizeM && (idn + _ni) < kSizeN) {
-    // 计算目标索引
-    int c_index = (c_transpose) ? (idm + _mi)*c_ld + (idn + _ni) : (idn + _ni)*c_ld + (idm + _mi);
-    
-    // 优化后的计算：避免分支预测失败
-    real current = cgm[c_index + c_offset];
-    real result;
-    
-    // 使用条件移动代替分支
-    result = (beta == 0) ? alpha * c_value : alpha * c_value + beta * current;
-    
-    // 存储结果
-    cgm[c_index + c_offset] = result;
-  }
-}*/
 
 // =================================================================================================
 
