@@ -78,19 +78,21 @@ INLINE_FUNC real GetVectorElementc(realcvec vec, int index) {
 }
 
 INLINE_FUNC void AddToVectorElement(realcvec* vec, int index, real value) {
-  /*#if VWCD == 1
-    *vec += value;
-  #elif VWCD == 2
-    if (index == 0) (*vec).x += value;
-    else (*vec).y += value;
-  #elif VWCD == 4*/
+#if PRECISION == 3232 || PRECISION == 6464
+  switch(index) {
+    case 0: (*vec).x = complex_add((*vec).x, value); break;
+    case 1: (*vec).y = complex_add((*vec).y, value); break;
+    case 2: (*vec).z = complex_add((*vec).z, value); break;
+    case 3: (*vec).w = complex_add((*vec).w, value); break;
+  }
+#else
   switch(index) {
     case 0: (*vec).x += value; break;
     case 1: (*vec).y += value; break;
     case 2: (*vec).z += value; break;
     case 3: (*vec).w += value; break;
   }
- /* #endif*/
+#endif
 }
 
 INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec, 

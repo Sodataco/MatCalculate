@@ -10,7 +10,7 @@
 // This is a generic GEMM kernel that works for all sizes and configurations: it doesn't require any
 // pre and and post-processing kernels.
 //
-// This kernel is seperated into three files. This is part 1 out of 4.
+// This kernel is seperated into three files. This is part 1 out of 3.
 //
 // =================================================================================================
 
@@ -22,7 +22,7 @@ R"(
 // this kernel file is used outside of the CLBlast library. Note that all parameters here have a
 // suffix 'D' to denote that they are for the 'direct' version of the GEMM kernel.
 #ifndef WGD
-  #define WGD 32      // Tile-size in dimension M, N, and K (e.g. 8, 16, 32, 64)
+  #define WGD 8      // Tile-size in dimension M, N, and K (e.g. 8, 16, 32, 64)
 #endif
 #ifndef MDIMCD
   #define MDIMCD 8    // Threads per workgroup in M-dimension (e.g. 8, 16, 32)
@@ -40,13 +40,10 @@ R"(
   #define KWID 1      // Unroll factor of the WGD loop (smaller or equal than WGD)
 #endif
 #ifndef VWMD
-  #define VWMD 4      // Vector width of matrices A and C
+  #define VWMD 1      // Vector width of matrices A and C
 #endif
 #ifndef VWND
-  #define VWND 4      // Vector width of matrix B
-#endif
-#ifndef VWCD
-  #define VWCD 4      
+  #define VWND 1      // Vector width of matrix B
 #endif
 #ifndef PADA
   #define PADA 1      // Local memory padding for matrix A
@@ -174,7 +171,6 @@ INLINE_FUNC real LocalToPrivateDirectB(LOCAL_PTR real* blm, const int _ni, const
 
 // Merges the results in Cpm with the global array in Cgm. This also performs the multiplication
 // with the constants: Cgm = alpha*A*B + beta*Cgm = alpha*Cpm + beta*Cgm
-
 INLINE_FUNC void StoreResultsDirect(__global real* cgm, const real c_value,
                                     const int _mi, const int _ni, const int idm, const int idn,
                                     const real alpha, const real beta,
@@ -219,7 +215,6 @@ INLINE_FUNC void StoreResultsChecked(__global real* cgm, const real c_value,
     cgm[c_index + c_offset] = result;
   }
 }
-
 
 // =================================================================================================
 
