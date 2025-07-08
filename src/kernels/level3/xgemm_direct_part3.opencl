@@ -252,7 +252,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
         }
       }
     }
-    // Stores a tile of results和 performs the multiplication with alpha and beta
+    // Stores a tile of results performs the multiplication with alpha and beta
     #pragma unroll
     for (int _ni = 0; _ni < NWID; _ni += 1) {
       #pragma unroll
