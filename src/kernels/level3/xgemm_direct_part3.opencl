@@ -13,7 +13,7 @@
 // Enables loading of this file using the C++ pre-processor's #include (C++11 standard raw string
 // literal). Comment-out this line for syntax-highlighting when developing.
 R"(
-//改
+
 #define CEIL_DIV(a, b) (((a) + (b) - 1) / (b))
 
 #if VWMD == 1
@@ -63,9 +63,7 @@ INLINE_FUNC void StoreResultsChecked(__global real* cgm, real value, int mi, int
                                     int idm, int idn, int kSizeM, int kSizeN,
                                     real alpha, real beta,
                                     int c_ld, int c_offset, int c_transpose);
-//改end
 
-//改
 INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSizeK,
                              const real_arg arg_alpha,
                              const real_arg arg_beta,//缩放因子
@@ -83,6 +81,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
   const __global real* restrict agms = (const __global real* restrict) agm;
   const __global real* restrict bgms = (const __global real* restrict) bgm;
 
+  //MWID每个工作项处理的M维度元素数
   #pragma promote_to_registers
   realmvec apd_vec[CEIL_DIV(MWID, VWMD)];
   #pragma promote_to_registers
@@ -99,10 +98,14 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
     }
   }
 
+  //WGD是工作组处理矩阵块的大小，每个工作项负责计算矩阵的一个小块（MWID x NWID 大小）
+  //get_local_id 确定当前工作项在它所在的工作组中的位置，GetGroupID确定是哪个工作组
   const int idm = get_local_id(0) * MWID + GetGroupID0() * WGD;
   const int idn = get_local_id(1) * NWID + GetGroupID1() * WGD;
+//ksize是矩阵M、N、K的大小，ksizeM=A的行数，ksizeN=B的列数，ksizeK=A的列数和B的行数
   if ((idm < (kSizeM/WGD)*WGD) && (idn < (kSizeN/WGD)*WGD)) {
 
+  //global->local
     int kwg = 0;
     for (; kwg < (kSizeK/WGD) * WGD; kwg += WGD) {
       // Vectorized loading: off-chip --> local (matrix A and B)
@@ -120,6 +123,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       }
       barrier(CLK_LOCAL_MEM_FENCE);
 
+      //local->private
       for (int pwi = 0; pwi < WGD; pwi += VEC_K_UNROLL) {
         #pragma unroll
         for (int _pit = 0; _pit < VEC_K_UNROLL; _pit++) {
@@ -135,22 +139,26 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
             for (int _ni = 0; _ni < CEIL_DIV(NWID, VWND); _ni++) {
               bpd_vec[_ni] = LocalToPrivateVectorB(blm, _ni, kg, b_transpose);
             }
+
             // Vectorized multiply-add
             #pragma unroll
             for (int _ni = 0; _ni < CEIL_DIV(NWID, VWND); _ni++) {
               #pragma unroll
               for (int _mi = 0; _mi < CEIL_DIV(MWID, VWMD); _mi++) {
-                // Expand vectors to scalars for computation
+                // 上面两个循环是遍历寄存器数组
                 #pragma unroll
                 for (int _vni = 0; _vni < VWND; _vni++) {
                   #pragma unroll
                   for (int _vmi = 0; _vmi < VWMD; _vmi++) {
+                    //下面两个循环是遍历向量中的元素
                     const real a_val = GetVectorElementm(apd_vec[_mi], _vmi);
                     const real b_val = GetVectorElementn(bpd_vec[_ni], _vni);
                     // Calculate target vector and element index
                     const int total_mi = _mi * VWMD + _vmi;
                     const int total_ni = _ni * VWND + _vni;
+                    //表示当前元素在累加器数组cpd_vec中的第几个向量
                     const int vec_idx = total_ni * CEIL_DIV(MWID, VWCD) + total_mi / VWCD;
+                    //表示当前元素在该向量中的第几个分量
                     const int elem_idx = total_mi % VWCD;
                     // Accumulate result
                     AddToVectorElement(&cpd_vec[vec_idx], elem_idx, a_val * b_val);
@@ -164,6 +172,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+    //k维展开每次加4，所以会有剩余维度
     // Loop over the remaining part (incomplete tile in K-dimension)
     for (; kwg < kSizeK; ++kwg) {
       // Scalar loading for remaining elements
@@ -192,7 +201,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
       }
     }
   }
-  //改end
+
   else {
   #pragma promote_to_registers
   real apd[MWID];
@@ -200,7 +209,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
   real bpd[NWID];
   #pragma promote_to_registers
   real cpd[NWID * MWID];
-    // Loops over all complete workgroup tiles (K-dimension)
+
     int kwg = 0;
     for (; kwg < (kSizeK/WGD) * WGD; kwg+=WGD) {
       // Loads data: off-chip --> local (matrix A and B)
@@ -252,7 +261,7 @@ INLINE_FUNC void XgemmDirect(const int kSizeM, const int kSizeN, const int kSize
         }
       }
     }
-    // Stores a tile of results performs the multiplication with alpha and beta
+    // Stores a tile of results和 performs the multiplication with alpha and beta
     #pragma unroll
     for (int _ni = 0; _ni < NWID; _ni += 1) {
       #pragma unroll

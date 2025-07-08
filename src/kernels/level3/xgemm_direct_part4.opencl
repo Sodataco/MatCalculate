@@ -78,21 +78,19 @@ INLINE_FUNC real GetVectorElementc(realcvec vec, int index) {
 }
 
 INLINE_FUNC void AddToVectorElement(realcvec* vec, int index, real value) {
-#if PRECISION == 3232 || PRECISION == 6464
-  switch(index) {
-    case 0: (*vec).x = complex_add((*vec).x, value); break;
-    case 1: (*vec).y = complex_add((*vec).y, value); break;
-    case 2: (*vec).z = complex_add((*vec).z, value); break;
-    case 3: (*vec).w = complex_add((*vec).w, value); break;
-  }
-#else
+  /*#if VWCD == 1
+    *vec += value;
+  #elif VWCD == 2
+    if (index == 0) (*vec).x += value;
+    else (*vec).y += value;
+  #elif VWCD == 4*/
   switch(index) {
     case 0: (*vec).x += value; break;
     case 1: (*vec).y += value; break;
     case 2: (*vec).z += value; break;
     case 3: (*vec).w += value; break;
   }
-#endif
+ /* #endif*/
 }
 
 INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec, 
@@ -101,8 +99,8 @@ INLINE_FUNC void StoreResultsVector(__global real* cgm, realcvec c_vec,
                                    real alpha, real beta,
                                    int c_ld, int c_offset,
                                    int c_transpose) {
-  const int col = idn + ni;
-  const int row_base = idm + mi_base;
+  const int col = idn + ni;//全局列号
+  const int row_base = idm + mi_base;//行基址
   
   if (c_transpose == 0) {
     // Non-transposed storage
